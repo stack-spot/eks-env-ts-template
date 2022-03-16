@@ -1,0 +1,33 @@
+name: eks-ts-template
+description: Template that create and configure a full functional EKS cluster
+types:
+  - env-template
+inputs:
+  - label: Project name
+    type: text
+    name: project_name
+  - label: Do you want to use vpc configuration from stages?
+    type: bool
+    name: stage_vpc_config
+    default: true
+  - label: AWS VPC ID
+    type: text
+    name: vpc
+    condition:
+      variable: stage_vpc_config
+      operator: "=="
+      value: false
+lifecycle:
+  deploy:
+    supported-os:
+      - windows
+      - linux
+      - mac
+    requirements-check:
+      npm:
+        check-command: npm --version
+        info: npm is not installed
+      dependecies:
+        check-command: npm i
+        info: Failed to install dependencies
+    deploy-command: npx cdk deploy -c stage=${stage}

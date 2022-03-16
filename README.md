@@ -1,1 +1,1 @@
-# eks-env-ts-template
+# zup-provisioning-eks-env-ts-template

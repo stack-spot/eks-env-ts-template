@@ -8,11 +8,7 @@ import * as fs from "fs";
 class {{project_name|to_camel}}EnvStack extends Stack {
   constructor(scope: Construct, stackId: string, props: StackProps, stageData: any) {
     super(scope, stackId, props);
-    {% if inputs.stage_vpc_config %}
     const vpc = this.getVpc(this, stageData);
-    {% else %}
-    const vpc = this.getVpc(this);
-    {% endif %}
     const cluster = this.createCluster(this, vpc);
     this.createOutput(this, "openId", cluster.openIdConnectProvider.openIdConnectProviderArn, stackId, stageData);
     this.createOutput(this, "clusterName", cluster.clusterName, stackId, stageData);
@@ -21,28 +17,23 @@ class {{project_name|to_camel}}EnvStack extends Stack {
     this.writeValuesToStageFile(stageData);
   }
 
-  {% if inputs.stage_vpc_config %}
   private getVpc(scope: Construct, stageData: any): IVpc {
-    if(stageData != undefined){
-      const vpcId = stageData['cloud']['vpcId'];
-      if(vpcId != undefined && vpcId != ''){
-        return Vpc.fromLookup(scope, "vpc", {
-          vpcId: vpcId
-        });
-      } else {
-        throw Error('Could not find a vpc configuration on the specified stage');
-      }
+    const vpcId = stageData['cloud']['vpcId'];
+    if(vpcId != undefined && vpcId != ''){
+      return Vpc.fromLookup(scope, "vpc", {
+        vpcId: vpcId
+      });
     } else {
-      throw Error('Could not find a stage to get vpc configuration');
+      {% if not inputs.stage_vpc_config %}
+      stageData['cloud']['vpcId'] = '{{inputs.vpc}}';
+      return Vpc.fromLookup(scope, "vpc", {
+        vpcId: '{{inputs.vpc}}'
+      });
+      {% else %}
+      throw Error('Could not find a vpcId data on the specified stage');
+      {% endif %}
     }
   }
-  {% else %}
-  private getVpc(scope: Construct): IVpc {
-    return Vpc.fromLookup(scope, "vpc", {
-      vpcId: '{{inputs.vpc}}'
-    });
-  }
-  {% endif %}
 
   private addAddons(scope: Construct, cluster: FargateCluster){
     new CfnAddon(scope, 'vpc-cni', {
@@ -107,4 +98,3 @@ class {{project_name|to_camel}}EnvStack extends Stack {
 }
 
 export default {{project_name|to_camel}}EnvStack;
-

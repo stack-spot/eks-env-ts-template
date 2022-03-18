@@ -6,22 +6,18 @@ import * as path from 'path';
 
 const app = new cdk.App();
 const stage = app.node.tryGetContext('stage');
-var account = process.env['AWS_ACCOUNT_ID'];
-var region = process.env['AWS_REGION'];
-var stageData = {} as any;
-if(stage != undefined){
-  const stageFilePath = path.join('stages', stage + '.json');
-  stageData = require(path.join('..', stageFilePath));
-  const awsData = stageData['cloud']['account'];
-  account = awsData['id'];
-  region = awsData['region'];
-  stageData['path'] = stageFilePath;
-  stageData['stackName'] = '{{project_name|to_camel}}EnvStack';
-  stageData['outputs'] = {} as any;
-  {% if not inputs.stage_vpc_config %}
-  stageData['cloud']['vpcId'] = '{{inputs.vpc}}';
-  {% endif %}
+if(stage == undefined){
+  throw Error('Stage not found in CDK context. Either use stk deploy <stage> or cdk -c stage=<stage> option.');
 }
+const stageFilePath = path.join('stages', stage + '.json');
+const stageData = require(path.join('..', stageFilePath));
+const awsData = stageData['cloud']['account'];
+const account = awsData['id'];
+const region = awsData['region'];
+stageData['path'] = stageFilePath;
+stageData['stackName'] = '{{project_name|to_camel}}EnvStack';
+stageData['outputs'] = {} as any;
+
 new {{project_name|to_camel}}EnvStack(app, '{{project_name|to_camel}}EnvStack', {
   env: {
     account: account,

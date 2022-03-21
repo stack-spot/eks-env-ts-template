@@ -2,21 +2,29 @@ name: eks-ts-template
 description: Template that create and configure a full functional EKS cluster
 types:
   - env-template
+
 inputs:
   - label: Project name
     type: text
     name: project_name
-  - label: Do you want to use vpc configuration from stages?
-    type: bool
-    name: stage_vpc_config
-    default: true
+  
   - label: AWS VPC ID
     type: text
     name: vpc
+
+  - label: Do you want to use custom namespace?
+    type: bool
+    name: custom_namespace
+    default: false
+  
+  - label: Namespace
+    type: text
+    name: namespace
     condition:
-      variable: stage_vpc_config
+      variable: custom_namespace
       operator: "=="
-      value: false
+      value: true
+
 lifecycle:
   deploy:
     supported-os:
@@ -31,3 +39,9 @@ lifecycle:
         check-command: npm i
         info: Failed to install dependencies
     deploy-command: npx cdk deploy -c stage=${stage}
+
+hooks:
+  - type: run
+    trigger: after-render
+    commands:
+    - echo This project deploy command needs a stage parameter(one of the ones you entered during project creation), to get and save some configurations, like vpc, namespace, cluster name. If provided, the vpcId in the stage file will be used instead of your initial input.

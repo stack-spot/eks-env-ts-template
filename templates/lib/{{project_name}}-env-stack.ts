@@ -1,15 +1,22 @@
 import { Stack, StackProps, CfnOutput } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { Vpc, IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2'
-import { CfnAddon, FargateCluster, KubernetesVersion, Cluster } from 'aws-cdk-lib/aws-eks'
-import { Role, AccountRootPrincipal } from 'aws-cdk-lib/aws-iam'
+import { CfnAddon, FargateCluster, KubernetesVersion, Cluster, FargateProfile } from 'aws-cdk-lib/aws-eks'
+import { Role, AccountRootPrincipal, PolicyStatement, Effect, Policy } from 'aws-cdk-lib/aws-iam'
 import * as fs from "fs";
 
 class {{project_name|to_camel}}EnvStack extends Stack {
   constructor(scope: Construct, stackId: string, props: StackProps, stageData: any) {
     super(scope, stackId, props);
     const vpc = this.getVpc(this, stageData);
+    {% if inputs.custom_namespace %}
+    const namespace = '{{inputs.namespace}}';
+    const cluster = this.createCluster(this, vpc, namespace);
+    this.createOutput(this, "namespace", namespace, stackId, stageData);
+    {% else %}
     const cluster = this.createCluster(this, vpc);
+    this.createOutput(this, "namespace", 'default', stackId, stageData);
+    {% endif %}
     this.createOutput(this, "openId", cluster.openIdConnectProvider.openIdConnectProviderArn, stackId, stageData);
     this.createOutput(this, "clusterName", cluster.clusterName, stackId, stageData);
     this.createOutput(this, "kubectlRole", cluster.kubectlRole!.roleArn, stackId, stageData);
@@ -24,14 +31,10 @@ class {{project_name|to_camel}}EnvStack extends Stack {
         vpcId: vpcId
       });
     } else {
-      {% if not inputs.stage_vpc_config %}
       stageData['cloud']['vpcId'] = '{{inputs.vpc}}';
       return Vpc.fromLookup(scope, "vpc", {
         vpcId: '{{inputs.vpc}}'
       });
-      {% else %}
-      throw Error('Could not find a vpcId data on the specified stage');
-      {% endif %}
     }
   }
 
@@ -62,7 +65,11 @@ class {{project_name|to_camel}}EnvStack extends Stack {
     return output;
   }
 
+  {% if inputs.custom_namespace %}
+  private createCluster(scope: Construct, vpc: IVpc, namespace: string): Cluster{
+  {% else %}
   private createCluster(scope: Construct, vpc: IVpc): Cluster{
+  {% endif %}
     const clusterName = '{{project_name}}-eks'
     const clusterAdmin = new Role(this, 'AdminRole', {
       assumedBy: new AccountRootPrincipal()
@@ -76,10 +83,28 @@ class {{project_name|to_camel}}EnvStack extends Stack {
       vpcSubnets: [{ subnetType: SubnetType.PRIVATE_ISOLATED, onePerAz: true }],
       defaultProfile: {
         selectors: [ { namespace: 'default' }, { namespace: 'kube-system' } ],
-        fargateProfileName: clusterName + '-FargateProfile'
+        fargateProfileName: clusterName + '-DefaultFargateProfile'
       }
     });
+    {% if inputs.custom_namespace %}
+    const customFargateProfileName = clusterName + '-' + namespace + '-FargateProfile';
+    new FargateProfile(scope, customFargateProfileName, {
+      cluster,
+      selectors: [ { namespace: namespace } ],
+      fargateProfileName: customFargateProfileName
+    });
+    {% endif %}
     cluster.awsAuth.addMastersRole(clusterAdmin);
+    const policy = new Policy(scope, clusterName + '-policy', {
+      statements: [
+        new PolicyStatement({
+          resources: ['*'],
+          actions: ['eks:*'],
+          effect: Effect.ALLOW
+        })
+      ]
+    });
+    policy.attachToRole(cluster.kubectlRole!);
     this.addAddons(scope, cluster);
     return cluster;
   }

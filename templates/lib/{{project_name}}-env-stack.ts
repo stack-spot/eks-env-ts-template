@@ -6,21 +6,24 @@ import { Role, AccountRootPrincipal, PolicyStatement, Effect, Policy } from 'aws
 import * as fs from "fs";
 
 class {{project_name|to_camel}}EnvStack extends Stack {
+
+  public readonly eksCluster: Cluster;
+
   constructor(scope: Construct, stackId: string, props: StackProps, stageData: any) {
     super(scope, stackId, props);
     const vpc = this.getVpc(this, stageData);
     {% if inputs.custom_namespace %}
     const namespace = '{{inputs.namespace}}';
-    const cluster = this.createCluster(this, vpc, namespace);
+    this.eksCluster = this.createCluster(this, vpc, namespace);
     this.createOutput(this, "namespace", namespace, stackId, stageData);
     {% else %}
-    const cluster = this.createCluster(this, vpc);
+    this.eksCluster = this.createCluster(this, vpc);
     this.createOutput(this, "namespace", 'default', stackId, stageData);
     {% endif %}
-    this.createOutput(this, "openId", cluster.openIdConnectProvider.openIdConnectProviderArn, stackId, stageData);
-    this.createOutput(this, "clusterName", cluster.clusterName, stackId, stageData);
-    this.createOutput(this, "kubectlRole", cluster.kubectlRole!.roleArn, stackId, stageData);
-    this.createOutput(this, "securityGroupId", cluster.clusterSecurityGroupId, stackId, stageData);
+    this.createOutput(this, "openId", this.eksCluster.openIdConnectProvider.openIdConnectProviderArn, stackId, stageData);
+    this.createOutput(this, "clusterName", this.eksCluster.clusterName, stackId, stageData);
+    this.createOutput(this, "kubectlRole", this.eksCluster.kubectlRole!.roleArn, stackId, stageData);
+    this.createOutput(this, "securityGroupId", this.eksCluster.clusterSecurityGroupId, stackId, stageData);
     this.writeValuesToStageFile(stageData);
   }
 

@@ -18,7 +18,7 @@ stageData['path'] = stageFilePath;
 stageData['stackName'] = '{{project_name|to_camel}}EnvStack';
 stageData['outputs'] = {} as any;
 
-new {{project_name|to_camel}}EnvStack(app, '{{project_name|to_camel}}EnvStack', {
+const eksStack = new {{project_name|to_camel}}EnvStack(app, '{{project_name|to_camel}}EnvStack', {
   env: {
     account: account,
     region: region

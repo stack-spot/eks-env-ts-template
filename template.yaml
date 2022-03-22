@@ -7,6 +7,7 @@ inputs:
   - label: Project name
     type: text
     name: project_name
+    global: true
   
   - label: AWS VPC ID
     type: text

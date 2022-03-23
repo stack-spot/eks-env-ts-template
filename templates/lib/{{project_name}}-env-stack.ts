@@ -3,7 +3,7 @@ import { Construct } from 'constructs';
 import { Vpc, IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2'
 import { CfnAddon, FargateCluster, KubernetesVersion, Cluster, FargateProfile } from 'aws-cdk-lib/aws-eks'
 import { Role, AccountRootPrincipal, PolicyStatement, Effect, Policy } from 'aws-cdk-lib/aws-iam'
-import * as fs from "fs";
+import * as fs from 'fs';
 
 class {{project_name|to_camel}}EnvStack extends Stack {
 
@@ -15,27 +15,27 @@ class {{project_name|to_camel}}EnvStack extends Stack {
     {% if inputs.custom_namespace %}
     const namespace = '{{inputs.namespace}}';
     this.eksCluster = this.createCluster(this, vpc, namespace);
-    this.createOutput(this, "namespace", namespace, stackId, stageData);
+    stageData['cloud']['namespace'] = namespace;
     {% else %}
     this.eksCluster = this.createCluster(this, vpc);
-    this.createOutput(this, "namespace", 'default', stackId, stageData);
+    stageData['cloud']['namespace'] = 'default';
     {% endif %}
-    this.createOutput(this, "openId", this.eksCluster.openIdConnectProvider.openIdConnectProviderArn, stackId, stageData);
-    this.createOutput(this, "clusterName", this.eksCluster.clusterName, stackId, stageData);
-    this.createOutput(this, "kubectlRole", this.eksCluster.kubectlRole!.roleArn, stackId, stageData);
-    this.createOutput(this, "securityGroupId", this.eksCluster.clusterSecurityGroupId, stackId, stageData);
+    this.createOutput(this, 'openId', this.eksCluster.openIdConnectProvider.openIdConnectProviderArn, stackId, stageData);
+    this.createOutput(this, 'clusterName', this.eksCluster.clusterName, stackId, stageData);
+    this.createOutput(this, 'kubectlRole', this.eksCluster.kubectlRole!.roleArn, stackId, stageData);
+    this.createOutput(this, 'securityGroupId', this.eksCluster.clusterSecurityGroupId, stackId, stageData);
     this.writeValuesToStageFile(stageData);
   }
 
   private getVpc(scope: Construct, stageData: any): IVpc {
     const vpcId = stageData['cloud']['vpcId'];
     if(vpcId != undefined && vpcId != ''){
-      return Vpc.fromLookup(scope, "vpc", {
+      return Vpc.fromLookup(scope, 'vpc', {
         vpcId: vpcId
       });
     } else {
       stageData['cloud']['vpcId'] = '{{inputs.vpc}}';
-      return Vpc.fromLookup(scope, "vpc", {
+      return Vpc.fromLookup(scope, 'vpc', {
         vpcId: '{{inputs.vpc}}'
       });
     }
